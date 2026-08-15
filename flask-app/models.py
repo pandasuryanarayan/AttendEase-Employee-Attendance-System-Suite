@@ -19,7 +19,7 @@ class User(db.Model):
     phone = db.Column(db.String(20))
     hire_date = db.Column(db.Date)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     attendance_records = db.relationship('Attendance', backref='employee', lazy='dynamic',
                                          cascade='all, delete-orphan')
@@ -45,7 +45,7 @@ class Attendance(db.Model):
     hours_worked = db.Column(db.Float)
     status = db.Column(db.String(20), default='present')  # present | late | absent | leave
     notes = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'date', name='uq_user_date'),
@@ -86,7 +86,7 @@ class LeaveRequest(db.Model):
     status = db.Column(db.String(20), default='pending')  # pending | approved | rejected
     admin_note = db.Column(db.Text)
     reviewed_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     @property
     def status_badge(self):

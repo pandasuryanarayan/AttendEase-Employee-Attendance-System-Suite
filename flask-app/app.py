@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
+from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify, send_from_directory
 from models import db, User, Attendance, LeaveRequest
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta
@@ -12,6 +12,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///attendance.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+
+# ─── Favicon Route ────────────────────────────────────────────────────────────
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.svg', mimetype='image/svg+xml')
 
 # ─── Decorators ───────────────────────────────────────────────────────────────
 
@@ -42,7 +49,7 @@ def admin_required(f):
 
 @app.context_processor
 def inject_now():
-    return {'now': datetime.utcnow(), 'current_date': date.today()}
+    return {'now': datetime.now(), 'current_date': date.today()}
 
 
 # ─── Auth Routes ──────────────────────────────────────────────────────────────
@@ -560,12 +567,12 @@ def leave_action(leave_id):
     if action == 'approve':
         leave.status = 'approved'
         leave.admin_note = admin_note
-        leave.reviewed_at = datetime.utcnow()
+        leave.reviewed_at = datetime.now()
         flash('Leave request approved.', 'success')
     elif action == 'reject':
         leave.status = 'rejected'
         leave.admin_note = admin_note
-        leave.reviewed_at = datetime.utcnow()
+        leave.reviewed_at = datetime.now()
         flash('Leave request rejected.', 'info')
     db.session.commit()
     return redirect(url_for('admin_leaves'))
