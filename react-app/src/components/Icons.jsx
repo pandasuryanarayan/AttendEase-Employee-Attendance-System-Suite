@@ -8,6 +8,15 @@ export const BrandLogoIcon = ({ size = 22, ...props }) => (
   </svg>
 );
 
+export const AuthLogoIcon = ({ size = 34, color = 'var(--primary)', ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="3" y="4" width="18" height="18" rx="3" />
+    <path d="M8 2v4M16 2v4M3 10h18" strokeLinecap="round" />
+    <circle cx="9" cy="15" r="1.5" fill={color} stroke="none" />
+    <circle cx="15" cy="15" r="1.5" fill={color} stroke="none" />
+  </svg>
+);
+
 export const DashboardIcon = ({ size = 20, ...props }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <rect x="3" y="3" width="7" height="7" rx="1" />

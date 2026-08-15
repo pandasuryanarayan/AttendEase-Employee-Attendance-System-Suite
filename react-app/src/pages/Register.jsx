@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import {
-  BrandLogoIcon,
+  AuthLogoIcon,
   UserIcon,
   MailIcon,
   LockIcon,
@@ -57,7 +57,7 @@ export const Register = ({ onNavigateLogin }) => {
       <div className="auth-card auth-card-wide">
         <div className="auth-logo">
           <div style={{ display: 'inline-flex', padding: '14px', background: 'var(--primary-light)', borderRadius: '16px', marginBottom: '8px' }}>
-            <BrandLogoIcon size={34} color="var(--primary)" />
+            <AuthLogoIcon size={34} color="var(--primary)" />
           </div>
           <h1>Create Account</h1>
           <p>Join AttendEase Employee System</p>

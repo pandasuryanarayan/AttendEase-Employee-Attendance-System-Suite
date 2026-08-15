@@ -1,7 +1,7 @@
 // src/pages/Login.jsx
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { BrandLogoIcon, MailIcon, LockIcon, EyeIcon, EyeOffIcon } from '../components/Icons';
+import { AuthLogoIcon, MailIcon, LockIcon, EyeIcon, EyeOffIcon } from '../components/Icons';
 import { FlashAlerts } from '../components/FlashAlerts';
 
 export const Login = ({ onNavigateRegister }) => {
@@ -29,14 +29,14 @@ export const Login = ({ onNavigateRegister }) => {
 
       <div className="auth-card">
         <div className="auth-logo">
-          <div style={{ display: 'inline-flex', padding: '12px', background: 'var(--primary-light)', borderRadius: '14px', marginBottom: '8px' }}>
-            <BrandLogoIcon size={32} color="var(--primary)" />
+          <div style={{ display: 'inline-flex', padding: '14px', background: 'var(--primary-light)', borderRadius: '16px', marginBottom: '8px' }}>
+            <AuthLogoIcon size={34} color="var(--primary)" />
           </div>
           <h1>AttendEase</h1>
           <p>Employee Attendance Management</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-form" id="login-form">
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
             <div className="input-wrapper">
@@ -60,7 +60,7 @@ export const Login = ({ onNavigateRegister }) => {
               <input
                 type={showPassword ? 'text' : 'password'}
                 id="password"
-                placeholder="Enter password"
+                placeholder="••••••••"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -76,33 +76,10 @@ export const Login = ({ onNavigateRegister }) => {
             </div>
           </div>
 
-          <button type="submit" className="btn btn-primary btn-block btn-lg" style={{ marginTop: '8px' }}>
+          <button type="submit" className="btn btn-primary btn-block btn-lg">
             Sign In
           </button>
         </form>
-
-        {/* Quick Demo Credentials */}
-        <div className="demo-creds">
-          <strong>Demo Accounts (1-Click Login):</strong>
-          <div className="demo-buttons">
-            <button
-              type="button"
-              className="btn btn-sm btn-secondary"
-              style={{ flex: 1 }}
-              onClick={() => handleDemoLogin('admin@company.com', 'admin123')}
-            >
-              Admin Demo
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm btn-secondary"
-              style={{ flex: 1 }}
-              onClick={() => handleDemoLogin('sarah@company.com', 'emp123')}
-            >
-              Employee Demo
-            </button>
-          </div>
-        </div>
 
         <p className="auth-link">
           Don't have an account?{' '}
@@ -116,6 +93,29 @@ export const Login = ({ onNavigateRegister }) => {
             Register here
           </a>
         </p>
+
+        {/* Quick Demo Credentials */}
+        <div className="demo-creds">
+          <p><strong>Quick Demo Sign In</strong></p>
+          <div className="demo-buttons">
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              style={{ flex: 1 }}
+              onClick={() => handleDemoLogin('admin@company.com', 'admin123')}
+            >
+              👑 Login Admin
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              style={{ flex: 1 }}
+              onClick={() => handleDemoLogin('alice@company.com', 'employee123')}
+            >
+              👤 Login Employee
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
