@@ -1452,7 +1452,7 @@ function renderLeaves() {
       <td><span class="badge ${badgeClass(l.status)}">${l.status.charAt(0).toUpperCase() + l.status.slice(1)}</span></td>
       <td>
         ${l.status === 'pending'
-          ? `<button class="btn btn-sm btn-danger" onclick="handleCancelLeave(${l.id})" title="Cancel this pending leave request">Cancel Request</button>`
+          ? `<button class="btn btn-sm btn-danger" onclick="handleCancelLeave('${l.id}')" title="Cancel this pending leave request">Cancel Request</button>`
           : l.admin_note
           ? `<span class="text-muted text-sm" title="${escapeHtml(l.admin_note)}">Note: ${escapeHtml(l.admin_note)}</span>`
           : '—'}
