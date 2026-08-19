@@ -1109,11 +1109,24 @@ function updateTopbar(page) {
 }
 
 function updateDateBadge() {
+  const now = new Date();
+  const fullDateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+
   const dateEl = document.getElementById('current-date');
   if (dateEl) {
-    const now = new Date();
-    dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    dateEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;"><span>${fullDateStr}</span><span style="opacity:0.4;">•</span><strong style="font-family:monospace;color:var(--primary);font-weight:700;">${timeStr}</strong></span>`;
   }
+
+  const liveDashClock = document.getElementById('live-dashboard-clock');
+  if (liveDashClock) {
+    liveDashClock.textContent = timeStr;
+  }
+
+  const headerSubtitles = document.querySelectorAll('.subtitle-live-clock');
+  headerSubtitles.forEach(el => {
+    el.innerHTML = `<span>${fullDateStr}</span><span style="opacity:0.4;margin:0 6px;">•</span><strong style="font-family:monospace;color:var(--primary);font-weight:700;">${timeStr}</strong>`;
+  });
 }
 
 // ==================== PAGE RENDERERS ====================
@@ -1319,7 +1332,7 @@ function renderEmployeeDashboard() {
     <div class="page-header">
       <div>
         <h2>Good ${greeting}, ${user.first_name}! 👋</h2>
-        <p class="subtitle">${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <p class="subtitle subtitle-live-clock" style="display:inline-flex;align-items:center;"><span>${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span><span style="opacity:0.4;margin:0 6px;">•</span><strong style="font-family:monospace;color:var(--primary);font-weight:700;">${today.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</strong></p>
       </div>
     </div>
     <div class="checkin-card">
@@ -1560,7 +1573,7 @@ function renderAdminDashboard() {
     <div class="page-header">
       <div>
         <h2>Admin Overview</h2>
-        <p class="subtitle">${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <p class="subtitle subtitle-live-clock" style="display:inline-flex;align-items:center;"><span>${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span><span style="opacity:0.4;margin:0 6px;">•</span><strong style="font-family:monospace;color:var(--primary);font-weight:700;">${today.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</strong></p>
       </div>
       <div class="header-actions">
         <a href="#employee-form" class="btn btn-primary"><svg viewBox="0 0 24 24" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Employee</a>
@@ -4771,6 +4784,7 @@ function init() {
   document.addEventListener('DOMContentLoaded', () => {
     handleRoute();
     updateDateBadge();
+    setInterval(updateDateBadge, 1000);
     document.getElementById('hamburger')?.addEventListener('click', () => {
       document.getElementById('sidebar').classList.toggle('open');
       document.getElementById('overlay').classList.toggle('active');
