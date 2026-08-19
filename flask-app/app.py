@@ -1,10 +1,13 @@
 # app.py
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify, send_from_directory
-from models import db, User, Attendance, LeaveRequest
+from models import db, User, Attendance, LeaveRequest, Salary, PayrollRules, PayrollInvoice
+from payroll_engine import calculate_payroll, format_inr, number_to_words_inr, get_default_payroll_rules, get_default_salaries
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta
 from functools import wraps
 import os
+import json
+import random
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -12,6 +15,20 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///attendance.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+
+# ─── Jinja2 Template Filters ─────────────────────────────────────────────────
+
+@app.template_filter('format_inr')
+def format_inr_filter(value):
+    return format_inr(value)
+
+@app.template_global('format_inr')
+def format_inr_global(value):
+    return format_inr(value)
+
+@app.template_global('number_to_words_inr')
+def number_to_words_inr_global(value):
+    return number_to_words_inr(value)
 
 # ─── Favicon Route ────────────────────────────────────────────────────────────
 
@@ -633,7 +650,343 @@ def admin_reports():
                            first_day=first_day, last_day=last_day)
 
 
-# ─── API Endpoints ────────────────────────────────────────────────────────────
+# ─── Payroll & Invoice Routes ────────────────────────────────────────────────
+
+def _get_rules():
+    """Get payroll rules from DB or return defaults."""
+    pr = PayrollRules.query.first()
+    if pr:
+        return pr.get_rules()
+    return get_default_payroll_rules()
+
+
+def _save_rules(rules_dict):
+    """Save payroll rules to DB."""
+    pr = PayrollRules.query.first()
+    if not pr:
+        pr = PayrollRules(rules_json='{}')
+        db.session.add(pr)
+    pr.set_rules(rules_dict)
+    db.session.commit()
+
+
+MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December']
+
+
+@app.route('/admin/payroll')
+@admin_required
+def admin_payroll():
+    selected_month = request.args.get('month', date.today().month, type=int)
+    selected_year = request.args.get('year', date.today().year, type=int)
+    rules = _get_rules()
+
+    emp_count = User.query.filter_by(role='employee', is_active=True).count()
+    existing = PayrollInvoice.query.filter_by(month=selected_month, year=selected_year).all()
+
+    total_gross = sum(i.gross_earnings or 0 for i in existing)
+    total_net = sum(i.net_pay or 0 for i in existing)
+
+    return render_template('payroll.html',
+                           rules=rules,
+                           selected_month=selected_month,
+                           selected_year=selected_year,
+                           emp_count=emp_count,
+                           existing_count=len(existing),
+                           total_gross=total_gross,
+                           total_net=total_net,
+                           months=MONTHS)
+
+
+@app.route('/admin/payroll/run', methods=['POST'])
+@admin_required
+def run_payroll():
+    month = request.form.get('month', date.today().month, type=int)
+    year = request.form.get('year', date.today().year, type=int)
+    rules = _get_rules()
+
+    employees = User.query.filter_by(role='employee', is_active=True).all()
+
+    try:
+        first_day = date(year, month, 1)
+        if month == 12:
+            last_day = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            last_day = date(year, month + 1, 1) - timedelta(days=1)
+    except ValueError:
+        flash('Invalid month/year.', 'danger')
+        return redirect(url_for('admin_payroll'))
+
+    count = 0
+    for emp in employees:
+        # Check if invoice already exists
+        existing = PayrollInvoice.query.filter_by(
+            user_id=emp.id, month=month, year=year
+        ).first()
+
+        # Get attendance records for the month
+        records = Attendance.query.filter(
+            Attendance.user_id == emp.id,
+            Attendance.date >= first_day,
+            Attendance.date <= last_day
+        ).all()
+
+        # Get salary info
+        sal = Salary.query.filter_by(user_id=emp.id).first()
+        salary_info = {
+            'base_ctc': sal.base_ctc if sal else 50000,
+            'category': sal.category if sal else 'Standard',
+        }
+
+        result = calculate_payroll(emp, records, rules, salary_info)
+
+        if existing:
+            # Update existing invoice
+            for key, val in result.items():
+                if hasattr(existing, key):
+                    setattr(existing, key, val)
+        else:
+            # Create new invoice
+            inv_num = f"INV-{year}-{month:02d}-{emp.id:04d}"
+            inv = PayrollInvoice(
+                user_id=emp.id,
+                invoice_number=inv_num,
+                month=month,
+                year=year,
+                status='approved',
+                **result
+            )
+            db.session.add(inv)
+        count += 1
+
+    db.session.commit()
+    flash(f'Payroll executed successfully for {count} employees.', 'success')
+    return redirect(url_for('admin_invoices', month=month, year=year))
+
+
+@app.route('/admin/invoices')
+@admin_required
+def admin_invoices():
+    selected_month = request.args.get('month', date.today().month, type=int)
+    selected_year = request.args.get('year', date.today().year, type=int)
+    status_filter = request.args.get('status', 'all')
+
+    query = PayrollInvoice.query.filter_by(month=selected_month, year=selected_year)
+    if status_filter != 'all':
+        query = query.filter_by(status=status_filter)
+    invoices = query.all()
+
+    # Build users lookup dict
+    user_ids = list(set(i.user_id for i in invoices))
+    users_list = User.query.filter(User.id.in_(user_ids)).all() if user_ids else []
+    users_dict = {u.id: u for u in users_list}
+
+    total_payout = sum(i.net_pay or 0 for i in invoices)
+    total_tax = sum(i.tds_tax or 0 for i in invoices)
+    total_ot = sum(i.overtime_pay or 0 for i in invoices)
+    paid_count = sum(1 for i in invoices if i.status == 'paid')
+
+    return render_template('invoices.html',
+                           invoices=invoices,
+                           users=users_dict,
+                           selected_month=selected_month,
+                           selected_year=selected_year,
+                           status_filter=status_filter,
+                           months=MONTHS,
+                           total_payout=total_payout,
+                           total_tax=total_tax,
+                           total_ot=total_ot,
+                           paid_count=paid_count)
+
+
+@app.route('/admin/invoices/<int:invoice_id>/mark-paid', methods=['POST'])
+@admin_required
+def mark_invoice_paid(invoice_id):
+    inv = PayrollInvoice.query.get_or_404(invoice_id)
+    inv.status = 'paid'
+    inv.payment_mode = request.form.get('payment_mode', 'NEFT / Direct Bank Transfer')
+    inv.transaction_ref = request.form.get('transaction_ref', '')
+    inv.paid_at = request.form.get('paid_date', date.today().isoformat())
+    db.session.commit()
+    flash(f'Invoice {inv.invoice_number} marked as PAID.', 'success')
+
+    # Redirect back to referring page
+    referrer = request.form.get('redirect_to', '')
+    if referrer == 'invoice_view':
+        return redirect(url_for('view_invoice', invoice_id=inv.id))
+    return redirect(url_for('admin_invoices', month=inv.month, year=inv.year))
+
+
+@app.route('/admin/invoices/delete-batch', methods=['POST'])
+@admin_required
+def delete_invoice_batch():
+    month = request.form.get('month', type=int)
+    year = request.form.get('year', type=int)
+    if month and year:
+        deleted = PayrollInvoice.query.filter_by(month=month, year=year).delete()
+        db.session.commit()
+        flash(f'Permanently deleted {deleted} invoices for {MONTHS[month - 1]} {year}.', 'success')
+    return redirect(url_for('admin_invoices', month=month, year=year))
+
+
+@app.route('/admin/invoices/<int:invoice_id>/add-line-item', methods=['POST'])
+@admin_required
+def add_line_item(invoice_id):
+    inv = PayrollInvoice.query.get_or_404(invoice_id)
+    item_type = request.form.get('item_type', 'earning')
+    item_name = request.form.get('item_name', '').strip()
+    item_amount = request.form.get('item_amount', 0, type=float)
+
+    if item_name and item_amount > 0:
+        items = inv.custom_line_items
+        items.append({'type': item_type, 'name': item_name, 'amount': item_amount})
+        inv.custom_line_items = items
+
+        # Recalculate net pay with custom items
+        custom_earnings = sum(i['amount'] for i in items if i['type'] == 'earning')
+        custom_deductions = sum(i['amount'] for i in items if i['type'] == 'deduction')
+        inv.gross_earnings = (inv.gross_earnings or 0) + (item_amount if item_type == 'earning' else 0)
+        inv.total_deductions = (inv.total_deductions or 0) + (item_amount if item_type == 'deduction' else 0)
+        inv.net_pay = inv.gross_earnings - inv.total_deductions
+
+        db.session.commit()
+        flash(f'Custom line item "{item_name}" added.', 'success')
+
+    return redirect(url_for('view_invoice', invoice_id=inv.id))
+
+
+@app.route('/admin/payroll-settings', methods=['GET', 'POST'])
+@admin_required
+def payroll_settings():
+    if request.method == 'POST':
+        rules = _get_rules()
+        action = request.form.get('action', '')
+
+        if action == 'save_structure':
+            rules['basic_pct'] = request.form.get('basic_pct', 50, type=int)
+            rules['hra_pct'] = request.form.get('hra_pct', 40, type=int)
+            rules['conveyance'] = request.form.get('conveyance', 2000, type=int)
+            rules['medical'] = request.form.get('medical', 1500, type=int)
+
+        elif action == 'save_deductions':
+            rules['pf_pct'] = request.form.get('pf_pct', 6, type=float)
+            rules['tds_pct'] = request.form.get('tds_pct', 10, type=float)
+            rules['insurance'] = request.form.get('insurance', 500, type=int)
+
+        elif action == 'save_attendance':
+            rules['daily_hours_threshold'] = request.form.get('daily_hours_threshold', 8.0, type=float)
+            rules['weekly_hours_threshold'] = request.form.get('weekly_hours_threshold', 40.0, type=float)
+            rules['ot_multiplier'] = request.form.get('ot_multiplier', 1.5, type=float)
+            rules['late_free_passes'] = request.form.get('late_free_passes', 2, type=int)
+            rules['late_penalty_type'] = request.form.get('late_penalty_type', 'half_day')
+
+        elif action == 'save_branding':
+            company = rules.get('company', {})
+            company['company_name'] = request.form.get('company_name', '').strip()
+            company['address'] = request.form.get('address', '').strip()
+            company['gstin'] = request.form.get('gstin', '').strip()
+            company['email'] = request.form.get('email', '').strip()
+            company['signatory_title'] = request.form.get('signatory_title', '').strip()
+            company['disclaimer'] = request.form.get('disclaimer', '').strip()
+            rules['company'] = company
+
+        elif action == 'activate_rules':
+            rules['rule_status'] = 'ACTIVE'
+            rules['effective_from'] = date.today().strftime('%d-%b-%Y')
+
+        elif action == 'save_salary':
+            # Save individual employee salary info
+            emp_id = request.form.get('emp_id', type=int)
+            if emp_id:
+                sal = Salary.query.filter_by(user_id=emp_id).first()
+                if not sal:
+                    sal = Salary(user_id=emp_id)
+                    db.session.add(sal)
+                sal.base_ctc = request.form.get('base_ctc', 50000, type=float)
+                sal.bank_name = request.form.get('bank_name', '').strip()
+                sal.bank_account_no = request.form.get('bank_account_no', '').strip()
+                sal.bank_ifsc = request.form.get('bank_ifsc', '').strip()
+                sal.pan_no = request.form.get('pan_no', '').strip()
+                sal.category = request.form.get('category', 'Standard')
+
+        _save_rules(rules)
+        flash('Payroll rules updated successfully.', 'success')
+        tab = request.form.get('tab', 'structure')
+        return redirect(url_for('payroll_settings', tab=tab))
+
+    rules = _get_rules()
+    tab = request.args.get('tab', 'structure')
+    employees = User.query.filter_by(role='employee', is_active=True)\
+        .order_by(User.first_name).all()
+
+    # Build salary lookup
+    salaries = {s.user_id: s for s in Salary.query.all()}
+
+    return render_template('payroll_settings.html',
+                           rules=rules,
+                           tab=tab,
+                           employees=employees,
+                           salaries=salaries,
+                           months=MONTHS)
+
+
+@app.route('/my-payslips')
+@login_required
+def my_payslips():
+    user = User.query.get_or_404(session['user_id'])
+    invoices = PayrollInvoice.query.filter_by(user_id=user.id)\
+        .order_by(PayrollInvoice.year.desc(), PayrollInvoice.month.desc()).all()
+
+    ytd_gross = sum(i.gross_earnings or 0 for i in invoices)
+    ytd_net = sum(i.net_pay or 0 for i in invoices)
+    ytd_tax = sum(i.tds_tax or 0 for i in invoices)
+    ytd_ot = sum(i.overtime_hours or 0 for i in invoices)
+
+    return render_template('my_payslips.html',
+                           user=user,
+                           invoices=invoices,
+                           ytd_gross=ytd_gross,
+                           ytd_net=ytd_net,
+                           ytd_tax=ytd_tax,
+                           ytd_ot=ytd_ot,
+                           months=MONTHS)
+
+
+@app.route('/invoice/<int:invoice_id>')
+@login_required
+def view_invoice(invoice_id):
+    inv = PayrollInvoice.query.get_or_404(invoice_id)
+    is_admin = session.get('role') == 'admin'
+
+    # Security: non-admin can only view their own invoices
+    if not is_admin and inv.user_id != session['user_id']:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('my_payslips'))
+
+    emp = User.query.get(inv.user_id)
+    sal = Salary.query.filter_by(user_id=inv.user_id).first() or Salary()
+    rules = _get_rules()
+    company = rules.get('company', get_default_payroll_rules()['company'])
+
+    auto_print = request.args.get('print', '') == 'true'
+
+    return render_template('invoice_view.html',
+                           inv=inv,
+                           emp=emp,
+                           sal=sal,
+                           company=company,
+                           is_admin=is_admin,
+                           auto_print=auto_print,
+                           months=MONTHS)
+
+
+@app.route('/invoice/<int:invoice_id>/print')
+@login_required
+def print_invoice(invoice_id):
+    return redirect(url_for('view_invoice', invoice_id=invoice_id, print='true'))
+
+
+
 
 @app.route('/api/attendance/today')
 @admin_required
@@ -731,7 +1084,79 @@ def seed_data():
         db.session.add(lr)
 
     db.session.commit()
-    print('✅ Seed data created.')
+
+    # Seed Payroll Rules
+    default_rules = get_default_payroll_rules()
+    pr = PayrollRules(rules_json=json.dumps(default_rules))
+    db.session.add(pr)
+    db.session.commit()
+
+    # Seed Salaries
+    salary_defaults = {
+        'Engineering': 75000,
+        'Marketing': 55000,
+        'HR': 50000,
+        'Finance': 65000,
+        'Management': 90000
+    }
+    banks = ['HDFC Bank Ltd.', 'State Bank of India', 'ICICI Bank Ltd.', 'Axis Bank Ltd.', 'Kotak Mahindra Bank']
+    for idx, emp in enumerate(users):
+        ctc = salary_defaults.get(emp.department, 50000)
+        sal = Salary(
+            user_id=emp.id,
+            base_ctc=ctc,
+            bank_name=banks[idx % len(banks)],
+            bank_account_no=f'••••••••489{idx+1}',
+            bank_ifsc=f'HDFC000100{idx+1}',
+            pan_no=f'ABCDE100{idx+1}F',
+            category='Standard'
+        )
+        db.session.add(sal)
+    db.session.commit()
+
+    # Seed Invoices for July and August (or current month & previous month)
+    curr_m = today.month
+    curr_y = today.year
+    prev_m = 12 if curr_m == 1 else curr_m - 1
+    prev_y = curr_y - 1 if curr_m == 1 else curr_y
+
+    for m, y, inv_status in [(prev_m, prev_y, 'paid'), (curr_m, curr_y, 'approved')]:
+        try:
+            f_day = date(y, m, 1)
+            if m == 12:
+                l_day = date(y + 1, 1, 1) - timedelta(days=1)
+            else:
+                l_day = date(y, m + 1, 1) - timedelta(days=1)
+        except ValueError:
+            continue
+
+        for emp in users:
+            recs = Attendance.query.filter(
+                Attendance.user_id == emp.id,
+                Attendance.date >= f_day,
+                Attendance.date <= l_day
+            ).all()
+
+            sal = Salary.query.filter_by(user_id=emp.id).first()
+            s_info = {'base_ctc': sal.base_ctc if sal else 50000, 'category': sal.category if sal else 'Standard'}
+            res = calculate_payroll(emp, recs, default_rules, s_info)
+
+            inv_num = f"INV-{y}-{m:02d}-{emp.id:04d}"
+            inv = PayrollInvoice(
+                user_id=emp.id,
+                invoice_number=inv_num,
+                month=m,
+                year=y,
+                status=inv_status,
+                payment_mode='NEFT / Direct Bank Transfer' if inv_status == 'paid' else None,
+                transaction_ref=f'TXN{random.randint(10000000, 99999999)}' if inv_status == 'paid' else None,
+                paid_at=date.today().isoformat() if inv_status == 'paid' else None,
+                **res
+            )
+            db.session.add(inv)
+
+    db.session.commit()
+    print('✅ Seed data created including payroll & invoices.')
 
 
 # ─── App Entry ────────────────────────────────────────────────────────────────
