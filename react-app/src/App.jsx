@@ -13,10 +13,18 @@ import { AttendanceRecords } from './pages/AttendanceRecords';
 import { LeaveRequests } from './pages/LeaveRequests';
 import { Reports } from './pages/Reports';
 
+// Payroll Pages
+import { RunPayroll } from './pages/RunPayroll';
+import { PayrollInvoices } from './pages/PayrollInvoices';
+import { PayrollSettings } from './pages/PayrollSettings';
+import { MyInvoices } from './pages/MyInvoices';
+import { InvoiceView } from './pages/InvoiceView';
+
 const AppContent = () => {
   const { currentUser } = useApp();
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
   const [activePage, setActivePage] = useState('dashboard');
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
 
   // Sync active page on user role change
   useEffect(() => {
@@ -52,13 +60,24 @@ const AppContent = () => {
         return currentUser.role === 'admin' ? 'Leave Management' : 'My Leave Requests';
       case 'reports':
         return 'Analytics & Reports';
+      case 'payroll':
+        return 'Run Monthly Payroll';
+      case 'invoices':
+        return 'Payroll Invoices & Register';
+      case 'payroll-settings':
+        return 'Payroll Policy & Rules Console';
+      case 'my-invoices':
+        return 'My Payslips & Tax Invoices';
+      case 'invoice-view':
+      case 'invoice-view-download':
+        return 'Tax Invoice & Salary Payslip';
       default:
         return 'AttendEase';
     }
   };
 
   return (
-    <div className="layout-wrapper">
+    <>
       <Sidebar activePage={activePage} setActivePage={setActivePage} />
 
       <div className="layout">
@@ -85,9 +104,48 @@ const AppContent = () => {
           {activePage === 'leaves' && <LeaveRequests />}
 
           {activePage === 'reports' && currentUser.role === 'admin' && <Reports />}
+
+          {/* Payroll Routes */}
+          {activePage === 'payroll' && currentUser.role === 'admin' && (
+            <RunPayroll onNavigate={setActivePage} />
+          )}
+
+          {activePage === 'invoices' && currentUser.role === 'admin' && (
+            <PayrollInvoices
+              onNavigate={setActivePage}
+              setSelectedInvoiceId={setSelectedInvoiceId}
+            />
+          )}
+
+          {activePage === 'payroll-settings' && currentUser.role === 'admin' && (
+            <PayrollSettings onNavigate={setActivePage} />
+          )}
+
+          {activePage === 'my-invoices' && (
+            <MyInvoices
+              onNavigate={setActivePage}
+              setSelectedInvoiceId={setSelectedInvoiceId}
+            />
+          )}
+
+          {activePage === 'invoice-view' && (
+            <InvoiceView
+              selectedInvoiceId={selectedInvoiceId}
+              autoPrint={false}
+              onNavigate={setActivePage}
+            />
+          )}
+
+          {activePage === 'invoice-view-download' && (
+            <InvoiceView
+              selectedInvoiceId={selectedInvoiceId}
+              autoPrint={true}
+              onNavigate={setActivePage}
+            />
+          )}
         </main>
       </div>
-    </div>
+    </>
   );
 };
 

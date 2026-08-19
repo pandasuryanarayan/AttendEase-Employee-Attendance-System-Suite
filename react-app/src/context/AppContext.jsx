@@ -1,6 +1,7 @@
 // src/context/AppContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initialUsers, generateInitialAttendance, generateInitialLeaves, formatDateStr } from '../data/initialData';
+import { getDefaultPayrollRules, getDefaultSalaries, generateMonthlyInvoicesList, calculatePayroll } from '../utils/payrollEngine';
 
 const AppContext = createContext();
 
@@ -28,6 +29,37 @@ export const AppProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : null;
   });
 
+  const [payrollRules, setPayrollRules] = useState(() => {
+    const saved = localStorage.getItem('eas_payroll_rules');
+    return saved ? JSON.parse(saved) : getDefaultPayrollRules();
+  });
+
+  const [salaries, setSalaries] = useState(() => {
+    const saved = localStorage.getItem('eas_salaries');
+    return saved ? JSON.parse(saved) : getDefaultSalaries();
+  });
+
+  const [invoices, setInvoices] = useState(() => {
+    const saved = localStorage.getItem('eas_invoices');
+    if (saved) return JSON.parse(saved);
+    // Default seed invoices for July (Paid) and August (Approved)
+    const initSalaries = getDefaultSalaries();
+    const initRules = getDefaultPayrollRules();
+    const initUsers = initialUsers;
+    const initAtt = generateInitialAttendance();
+    const initLvs = generateInitialLeaves();
+
+    let seeded = generateMonthlyInvoicesList(7, 2026, initUsers, initAtt, initLvs, initSalaries, initRules, []);
+    seeded.forEach(i => {
+      i.status = 'paid';
+      i.payment_mode = 'NEFT / Direct Bank Transfer';
+      i.transaction_ref = 'TXN' + Math.floor(10000000 + Math.random() * 90000000);
+      i.paid_at = '2026-07-31';
+    });
+    seeded = generateMonthlyInvoicesList(8, 2026, initUsers, initAtt, initLvs, initSalaries, initRules, seeded);
+    return seeded;
+  });
+
   const [flashes, setFlashes] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -51,6 +83,18 @@ export const AppProvider = ({ children }) => {
       localStorage.removeItem('attendease_current_user');
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    localStorage.setItem('eas_payroll_rules', JSON.stringify(payrollRules));
+  }, [payrollRules]);
+
+  useEffect(() => {
+    localStorage.setItem('eas_salaries', JSON.stringify(salaries));
+  }, [salaries]);
+
+  useEffect(() => {
+    localStorage.setItem('eas_invoices', JSON.stringify(invoices));
+  }, [invoices]);
 
   // ─── Flash Notifications ────────────────────────────────────────────────
   const addFlash = (message, category = 'info') => {
@@ -323,6 +367,68 @@ export const AppProvider = ({ children }) => {
     addFlash('Attendance record updated.', 'success');
   };
 
+  // ─── Payroll Engine Operations ────────────────────────────────────────
+  const savePayrollRules = (newRules) => {
+    setPayrollRules(newRules);
+    addFlash('Payroll policy rules saved successfully.', 'success');
+  };
+
+  const saveSalaries = (newSalaries) => {
+    setSalaries(newSalaries);
+    addFlash('Employee salary mapping updated.', 'success');
+  };
+
+  const runMonthlyPayroll = (month, year) => {
+    const updated = generateMonthlyInvoicesList(month, year, users, attendance, leaves, salaries, payrollRules, invoices);
+    setInvoices(updated);
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    addFlash(`⚡ Monthly payroll invoices for ${months[month - 1]} ${year} generated successfully!`, 'success');
+  };
+
+  const markInvoiceAsPaid = (invoiceId, mode, ref, date) => {
+    setInvoices((prev) =>
+      prev.map((i) => {
+        if (String(i.id) === String(invoiceId)) {
+          return {
+            ...i,
+            status: 'paid',
+            payment_mode: mode,
+            transaction_ref: ref,
+            paid_at: date,
+          };
+        }
+        return i;
+      })
+    );
+    addFlash('Invoice marked as Paid & Settled successfully!', 'success');
+  };
+
+  const deleteMonthlyInvoicesBatch = (month, year) => {
+    setInvoices((prev) => prev.filter((i) => !(i.month === month && i.year === year)));
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    addFlash(`🗑️ Permanently deleted all payroll invoices for ${months[month - 1]} ${year}.`, 'success');
+  };
+
+  const updateInvoiceCustomItems = (invoiceId, items) => {
+    setInvoices((prev) =>
+      prev.map((i) => {
+        if (String(i.id) === String(invoiceId)) {
+          const customTotal = items.reduce((a, b) => a + (b.amount || 0), 0);
+          const newGross = i.gross_earnings + customTotal;
+          const newNet = Math.max(0, newGross - i.total_deductions);
+          return {
+            ...i,
+            custom_line_items: items,
+            gross_earnings: newGross,
+            net_pay: newNet,
+          };
+        }
+        return i;
+      })
+    );
+    addFlash('Invoice line items updated.', 'success');
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -330,6 +436,9 @@ export const AppProvider = ({ children }) => {
         attendance,
         leaves,
         currentUser,
+        payrollRules,
+        salaries,
+        invoices,
         flashes,
         sidebarOpen,
         setSidebarOpen,
@@ -347,6 +456,12 @@ export const AppProvider = ({ children }) => {
         toggleEmployeeStatus,
         deleteEmployee,
         editAttendanceRecord,
+        savePayrollRules,
+        saveSalaries,
+        runMonthlyPayroll,
+        markInvoiceAsPaid,
+        deleteMonthlyInvoicesBatch,
+        updateInvoiceCustomItems,
       }}
     >
       {children}

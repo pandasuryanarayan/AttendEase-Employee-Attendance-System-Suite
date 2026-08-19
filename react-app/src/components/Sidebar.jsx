@@ -8,6 +8,9 @@ import {
   AttendanceIcon,
   LeaveIcon,
   ReportIcon,
+  PayrollIcon,
+  InvoicesIcon,
+  SettingsIcon,
   LogoutIcon,
 } from './Icons';
 
@@ -85,6 +88,32 @@ export const Sidebar = ({ activePage, setActivePage }) => {
                 <ReportIcon size={20} />
                 Analytics & Reports
               </button>
+
+              <div className="nav-section-label">Payroll & Finance</div>
+              <button
+                type="button"
+                className={`nav-item ${activePage === 'payroll' ? 'active' : ''}`}
+                onClick={() => handleNavClick('payroll')}
+              >
+                <PayrollIcon size={20} />
+                Run Monthly Payroll
+              </button>
+              <button
+                type="button"
+                className={`nav-item ${activePage === 'invoices' || activePage === 'invoice-view' ? 'active' : ''}`}
+                onClick={() => handleNavClick('invoices')}
+              >
+                <InvoicesIcon size={20} />
+                Payroll Invoices & Register
+              </button>
+              <button
+                type="button"
+                className={`nav-item ${activePage === 'payroll-settings' ? 'active' : ''}`}
+                onClick={() => handleNavClick('payroll-settings')}
+              >
+                <SettingsIcon size={20} />
+                Payroll Rules & Policy
+              </button>
             </>
           ) : (
             <>
@@ -111,6 +140,14 @@ export const Sidebar = ({ activePage, setActivePage }) => {
               >
                 <LeaveIcon size={20} />
                 My Leave Requests
+              </button>
+              <button
+                type="button"
+                className={`nav-item ${activePage === 'my-invoices' || activePage === 'invoice-view' ? 'active' : ''}`}
+                onClick={() => handleNavClick('my-invoices')}
+              >
+                <InvoicesIcon size={20} />
+                My Payslips
               </button>
             </>
           )}
