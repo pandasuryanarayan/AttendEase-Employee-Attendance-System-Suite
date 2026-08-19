@@ -326,6 +326,22 @@ def leave_request():
     return render_template('leaves.html', user=user, leaves=leaves, is_admin=False)
 
 
+@app.route('/leave/<int:leave_id>/cancel', methods=['POST'])
+@login_required
+def cancel_leave(leave_id):
+    leave = LeaveRequest.query.get_or_404(leave_id)
+    if leave.user_id != session['user_id']:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('leave_request'))
+    if leave.status != 'pending':
+        flash('Cannot cancel leave request once it is reviewed by admin.', 'warning')
+        return redirect(url_for('leave_request'))
+    db.session.delete(leave)
+    db.session.commit()
+    flash('Leave request canceled successfully.', 'info')
+    return redirect(url_for('leave_request'))
+
+
 # ─── Admin Routes ─────────────────────────────────────────────────────────────
 
 @app.route('/admin')

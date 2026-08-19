@@ -6,7 +6,7 @@ import { PlusIcon, LeaveIcon } from '../components/Icons';
 import { formatDateStr } from '../data/initialData';
 
 export const LeaveRequests = () => {
-  const { currentUser, users, leaves, requestLeave, reviewLeave } = useApp();
+  const { currentUser, users, leaves, requestLeave, reviewLeave, cancelLeave } = useApp();
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -57,6 +57,13 @@ export const LeaveRequests = () => {
     reviewLeave(reviewingLeave.id, action, adminNote);
     setReviewingLeave(null);
     setAdminNote('');
+  };
+
+  const handleCancelLeave = (leave) => {
+    if (leave.status !== 'pending') return;
+    if (window.confirm(`Are you sure you want to cancel this ${leave.leave_type} leave request?`)) {
+      cancelLeave(leave.id);
+    }
   };
 
   const getLeaveTypeBadgeClass = (type) => {
@@ -217,6 +224,15 @@ export const LeaveRequests = () => {
                               }}
                             >
                               Review
+                            </button>
+                          ) : !isAdmin && leave.status === 'pending' ? (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              onClick={() => handleCancelLeave(leave)}
+                              title="Cancel this pending leave request"
+                            >
+                              Cancel Request
                             </button>
                           ) : leave.admin_note ? (
                             <span className="text-muted text-sm" title={leave.admin_note}>

@@ -91,6 +91,10 @@
               <span class="text-muted text-sm">
                 {{ leave.reviewed_at.strftime('%b %d') if leave.reviewed_at else '—' }}
               </span>
+            {% elif not is_admin and leave.status == 'pending' %}
+              <form method="POST" action="{{ url_for('cancel_leave', leave_id=leave.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to cancel this leave request?');">
+                <button type="submit" class="btn btn-sm btn-danger">Cancel Request</button>
+              </form>
             {% else %}
               {% if leave.admin_note %}
                 <span class="text-muted text-sm" title="{{ leave.admin_note }}">Note: {{ leave.admin_note }}</span>

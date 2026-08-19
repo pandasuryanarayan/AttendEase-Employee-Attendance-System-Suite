@@ -266,6 +266,18 @@ export const AppProvider = ({ children }) => {
     addFlash(`Leave request ${action === 'approve' ? 'approved' : 'rejected'}.`, action === 'approve' ? 'success' : 'info');
   };
 
+  const cancelLeave = (leaveId) => {
+    const target = leaves.find((l) => l.id === leaveId);
+    if (!target) return false;
+    if (target.status !== 'pending') {
+      addFlash('Cannot cancel leave request once it is reviewed by admin.', 'warning');
+      return false;
+    }
+    setLeaves((prev) => prev.filter((l) => l.id !== leaveId));
+    addFlash('Leave request canceled successfully.', 'info');
+    return true;
+  };
+
   // ─── Employee Management (Admin) ──────────────────────────────────────
   const addEmployee = (data) => {
     const cleanEmail = data.email.trim().toLowerCase();
@@ -451,6 +463,7 @@ export const AppProvider = ({ children }) => {
         checkOut,
         requestLeave,
         reviewLeave,
+        cancelLeave,
         addEmployee,
         editEmployee,
         toggleEmployeeStatus,

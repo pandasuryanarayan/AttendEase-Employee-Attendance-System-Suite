@@ -1450,7 +1450,13 @@ function renderLeaves() {
       <td>${l.days_requested}</td>
       <td class="text-truncate" style="max-width:180px" title="${escapeHtml(l.reason || '')}">${escapeHtml(l.reason || '—')}</td>
       <td><span class="badge ${badgeClass(l.status)}">${l.status.charAt(0).toUpperCase() + l.status.slice(1)}</span></td>
-      <td>${l.admin_note ? `<span class="text-muted text-sm" title="${escapeHtml(l.admin_note)}">Note: ${escapeHtml(l.admin_note)}</span>` : '—'}</td>
+      <td>
+        ${l.status === 'pending'
+          ? `<button class="btn btn-sm btn-danger" onclick="handleCancelLeave(${l.id})" title="Cancel this pending leave request">Cancel Request</button>`
+          : l.admin_note
+          ? `<span class="text-muted text-sm" title="${escapeHtml(l.admin_note)}">Note: ${escapeHtml(l.admin_note)}</span>`
+          : '—'}
+      </td>
     </tr>
   `).join('');
 
@@ -4083,6 +4089,22 @@ function deleteInvoice(invoiceId) {
   Storage.saveInvoices(invoices);
   showFlash('Invoice deleted successfully.', 'success');
   handleRoute();
+}
+
+function handleCancelLeave(leaveId) {
+  const leaves = Storage.getLeaves();
+  const leave = leaves.find(l => l.id == leaveId);
+  if (!leave) return;
+  if (leave.status !== 'pending') {
+    showFlash('Cannot cancel leave request once it is reviewed by admin.', 'danger');
+    return;
+  }
+  if (confirm(`Are you sure you want to cancel this ${leave.leave_type} leave request?`)) {
+    const updatedLeaves = leaves.filter(l => l.id != leaveId);
+    Storage.saveLeaves(updatedLeaves);
+    showFlash('Leave request canceled successfully.', 'info');
+    handleRoute();
+  }
 }
 
 // ==================== EVENT BINDING ====================
