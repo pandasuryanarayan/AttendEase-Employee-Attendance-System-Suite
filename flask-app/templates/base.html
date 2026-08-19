@@ -128,7 +128,7 @@
     <div class="topbar-right">
       <span class="date-badge">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
-        {{ current_date.strftime('%A, %B %d, %Y') }}
+        <span id="live-topbar-date"><span style="display:inline-flex;align-items:center;gap:6px;"><span>{{ current_date.strftime('%A, %B %d, %Y') }}</span></span></span>
       </span>
     </div>
   </header>
@@ -187,6 +187,29 @@
   setTimeout(() => {
     document.querySelectorAll('.flash').forEach(el => el.remove());
   }, 5000);
+
+  function updateLiveClock() {
+    const now = new Date();
+    const fullDateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+
+    const dateEl = document.getElementById('live-topbar-date');
+    if (dateEl) {
+      dateEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;"><span>${fullDateStr}</span><span style="opacity:0.4;">•</span><strong style="font-family:monospace;color:var(--primary);font-weight:700;">${timeStr}</strong></span>`;
+    }
+
+    const liveDashClock = document.getElementById('live-dashboard-clock');
+    if (liveDashClock) {
+      liveDashClock.textContent = timeStr;
+    }
+
+    const headerSubtitles = document.querySelectorAll('.subtitle-live-clock');
+    headerSubtitles.forEach(el => {
+      el.innerHTML = `<span>${fullDateStr}</span><span style="opacity:0.4;margin:0 6px;">•</span><strong style="font-family:monospace;color:var(--primary);font-weight:700;">${timeStr}</strong>`;
+    });
+  }
+  setInterval(updateLiveClock, 1000);
+  updateLiveClock();
 </script>
 </body>
 </html>

@@ -11,7 +11,7 @@
       {% if hour < 12 %}Morning{% elif hour < 17 %}Afternoon{% else %}Evening{% endif %},
       {{ user.first_name }}! 👋
     </h2>
-    <p class="subtitle">{{ today.strftime('%A, %B %d, %Y') }}</p>
+    <p class="subtitle subtitle-live-clock" style="display:inline-flex;align-items:center;"><span>{{ today.strftime('%A, %B %d, %Y') }}</span></p>
   </div>
 </div>
 
