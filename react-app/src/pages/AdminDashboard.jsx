@@ -16,8 +16,14 @@ import {
 export const AdminDashboard = ({ onNavigate, onOpenAddEmployee }) => {
   const { users, attendance, leaves } = useApp();
 
-  const todayStr = formatDateStr(new Date());
-  const now = new Date();
+  const [now, setNow] = React.useState(new Date());
+
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const todayStr = formatDateStr(now);
 
   const activeEmployees = users.filter((u) => u.role === 'employee' && u.is_active);
   const totalEmployeesCount = activeEmployees.length;
@@ -98,8 +104,12 @@ export const AdminDashboard = ({ onNavigate, onOpenAddEmployee }) => {
       <div className="page-header">
         <div>
           <h2>Admin Overview</h2>
-          <p className="subtitle">
-            {now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          <p className="subtitle" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+            <span>{now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            <span style={{ opacity: 0.4 }}>•</span>
+            <strong style={{ fontFamily: 'monospace', color: 'var(--primary)', fontWeight: 700 }}>
+              {now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+            </strong>
           </p>
         </div>
         <div className="header-actions">

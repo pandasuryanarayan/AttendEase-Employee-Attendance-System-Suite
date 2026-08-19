@@ -95,13 +95,19 @@ export const EmployeeDashboard = ({ onNavigate }) => {
           <h2>
             {greeting}, {currentUser.first_name}! 👋
           </h2>
-          <p className="subtitle">
-            {time.toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
+          <p className="subtitle" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+            <span>
+              {time.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </span>
+            <span style={{ opacity: 0.4 }}>•</span>
+            <strong style={{ fontFamily: 'monospace', color: 'var(--primary)', fontWeight: 700 }}>
+              {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+            </strong>
           </p>
         </div>
       </div>
