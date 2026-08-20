@@ -1,6 +1,6 @@
 # AttendEase — Employee Attendance System Suite
 
-A complete **Employee Attendance Management System** implemented across three distinct web technology architectures: **Flask (Python SSR)**, **Vanilla JS (Client-Side SPA)**, and **React 19 (Component-Driven SPA)**.
+AttendEase: A comprehensive Employee Attendance Management System implemented in three distinct architectures (Flask, Vanilla JS, and React 19) sharing a unified design system.
 
 All three implementations share a unified **Design System** (`Plus Jakarta Sans` typography, HSL color tokens, dark indigo sidebar, vector SVG icon set, and standardized responsive layouts).
 
