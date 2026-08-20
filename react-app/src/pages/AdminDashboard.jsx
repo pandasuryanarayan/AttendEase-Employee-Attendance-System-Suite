@@ -41,20 +41,18 @@ export const AdminDashboard = ({ onNavigate, onOpenAddEmployee }) => {
   const absentTodayCount = Math.max(0, totalEmployeesCount - presentTodayCount - onLeaveTodayCount);
   const pendingLeavesCount = leaves.filter((l) => l.status === 'pending').length;
 
-  // Chart data calculation for last 7 working days
+  // Chart data calculation for last 7 calendar days (filtering out weekends)
   const chartDays = [];
-  let dayOffset = 0;
-  while (chartDays.length < 7 && dayOffset < 20) {
-    const d = new Date();
-    d.setDate(now.getDate() - dayOffset);
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
     if (d.getDay() !== 0 && d.getDay() !== 6) {
-      chartDays.unshift({
+      chartDays.push({
         dateObj: d,
         dateStr: formatDateStr(d),
         label: d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }),
       });
     }
-    dayOffset++;
   }
 
   const chartData = chartDays.map((cd) => {
