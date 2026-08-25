@@ -1,6 +1,6 @@
 # AttendEase — Employee Attendance System Suite
 
-AttendEase: A comprehensive Employee Attendance Management System implemented in three distinct architectures (Flask, Vanilla JS, and React 19) sharing a unified design system.
+AttendEase: A comprehensive Employee Attendance Management System implemented in four distinct architectures (Flask, Vanilla JS, React 19, and native Android) sharing a unified design system.
 
 All three implementations share a unified **Design System** (`Plus Jakarta Sans` typography, HSL color tokens, dark indigo sidebar, vector SVG icon set, and standardized responsive layouts).
 
@@ -10,24 +10,25 @@ All three implementations share a unified **Design System** (`Plus Jakarta Sans`
 
 ```text
 employee-attendance-system/
-├── 🐍 flask-app/    # Server-Side Rendered app with Python, Flask, SQLAlchemy & SQLite
-├── 🌐 html-app/     # Client-Side Single Page Application (SPA) with Vanilla HTML/CSS/JS
-└── ⚛️ react-app/    # Modern Component-Driven SPA with React 19, Vite & Context API
+├── 🐍 flask-app/      # Server-Side Rendered app with Python, Flask, SQLAlchemy & SQLite
+├── 🌐 html-app/       # Client-Side Single Page Application (SPA) with Vanilla HTML/CSS/JS
+├── ⚛️ react-app/      # Modern Component-Driven SPA with React 19, Vite & Context API
+└── 🤖 android-app/    # Native Android app packaging the EXACT html-app SPA in a WebView shell
 ```
 
 ---
 
 ## ⚡ Technical Comparison Matrix
 
-| Aspect / Feature | 🐍 `flask-app` | 🌐 `html-app` | ⚛️ `react-app` |
-| :--- | :--- | :--- | :--- |
-| **Architecture** | Server-Side Rendered (SSR) | Client-Side SPA | Component-Driven SPA |
-| **Language / Engine** | Python 3 / Jinja2 | JavaScript (ES6+) | React 19 (JSX) |
-| **Build Tooling** | None (Flask Dev Server) | None (Browser Native) | Vite 8 |
-| **Persistence Layer** | SQLite Database (`attendance.db`) | Browser `localStorage` | Browser `localStorage` |
-| **State / Session** | Flask Server Sessions | JS Storage Module | React Context API (`AppContext`) |
-| **Routing** | Flask Server Routes (`@app.route`) | Hash Router (`window.location.hash`) | Component State Views |
-| **Default Port** | `http://localhost:5000` | `http://localhost:8000` | `http://localhost:5173` |
+| Aspect / Feature | 🐍 `flask-app` | 🌐 `html-app` | ⚛️ `react-app` | 🤖 `android-app` |
+| :--- | :--- | :--- | :--- | :--- |
+| **Architecture** | Server-Side Rendered (SSR) | Client-Side SPA | Component-Driven SPA | Native Android shell + embedded `html-app` SPA |
+| **Language / Engine** | Python 3 / Jinja2 | JavaScript (ES6+) | React 19 (JSX) | Kotlin + WebView (Chromium) |
+| **Build Tooling** | None (Flask Dev Server) | None (Browser Native) | Vite 8 | Gradle 8.9 + Android Gradle Plugin |
+| **Persistence Layer** | SQLite Database (`attendance.db`) | Browser `localStorage` | Browser `localStorage` | WebView `localStorage` (DOM storage) |
+| **State / Session** | Flask Server Sessions | JS Storage Module | React Context API (`AppContext`) | SPA JS Storage Module |
+| **Routing** | Flask Server Routes (`@app.route`) | Hash Router (`window.location.hash`) | Component State Views | Hash Router inside WebView (+ hardware back) |
+| **Default Port** | `http://localhost:5000` | `http://localhost:8000` | `http://localhost:5173` | N/A (installable APK, runs offline) |
 
 ---
 

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AttendEase</string>
+    <string name="app_description">AttendEase — Modern Employee Attendance System: check-in/out, attendance records, leave management, monthly reports, payroll engine and printable tax invoices.</string>
+</resources>
