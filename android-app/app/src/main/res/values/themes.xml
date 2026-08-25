@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AttendEase application theme.
+         The windowBackground doubles as the branded cold-start splash
+         (indigo → violet gradient + calendar glyph from favicon.svg). -->
+    <style name="Theme.AttendEase" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="colorPrimaryDark">@color/brand_primary_dark</item>
+        <item name="colorAccent">@color/brand_purple</item>
+        <item name="android:windowBackground">@drawable/bg_splash</item>
+        <!-- The SPA topbar is white; blend the system bars into it. -->
+        <item name="android:statusBarColor">@color/surface</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/surface</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>
