@@ -18,8 +18,8 @@ local.properties
 *.dex
 
 # Keystore files (uncomment to keep release keystore out of VCS)
-# *.jks
-# *.keystore
+*.jks
+*.keystore
 
 # OS noise
 .DS_Store
