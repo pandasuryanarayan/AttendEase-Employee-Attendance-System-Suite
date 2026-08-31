@@ -12,7 +12,7 @@
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 </head>
-<body class="{% block body_class %}{% endblock %}">
+<body class="{% block body_class %}{% endblock %} {% if not session.user_id %}auth-page{% endif %}">
 
 {% if session.user_id %}
 <!-- ── Sidebar ──────────────────────────────────────────────────── -->
@@ -121,7 +121,7 @@
 <!-- ── Top Bar ──────────────────────────────────────────────────── -->
 <div class="layout">
   <header class="topbar">
-    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">
+    <button class="hamburger" id="hamburger" aria-label="Toggle Navigation" onclick="toggleSidebar()">
       <span></span><span></span><span></span>
     </button>
     <div class="topbar-title">{% block page_title %}{% endblock %}</div>
@@ -173,9 +173,19 @@
 
 <script>
   function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('open');
-    document.getElementById('overlay').classList.toggle('active');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    if (sidebar) sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('active');
   }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('overlay');
+      if (sidebar) sidebar.classList.remove('open');
+      if (overlay) overlay.classList.remove('active');
+    }
+  });
   function togglePw(btn) {
     const input = btn.closest('.input-wrapper').querySelector('input');
     const isPw = input.type === 'password';
