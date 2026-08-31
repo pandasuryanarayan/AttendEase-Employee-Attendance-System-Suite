@@ -925,8 +925,14 @@ function handleRoute() {
   const adminPages = ['admin', 'employees', 'employee-form', 'admin-attendance', 'admin-leaves', 'reports', 'payroll', 'payroll-settings'];
 
   const topbar = document.querySelector('.topbar');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
   const layout = document.getElementById('layout');
   const content = document.getElementById('main-content');
+
+  // Automatically close mobile sidebar on navigation
+  if (sidebar) sidebar.classList.remove('open');
+  if (overlay) overlay.classList.remove('active');
 
   if (!user && !publicPages.includes(page)) {
     navigate('login');
@@ -942,19 +948,23 @@ function handleRoute() {
   }
 
   if (publicPages.includes(page)) {
+    document.body.classList.add('auth-page');
     if (topbar) topbar.style.display = 'none';
+    if (sidebar) sidebar.style.display = 'none';
     if (layout) {
-      layout.style.marginLeft = '0';
-      layout.style.width = '100%';
+      layout.style.marginLeft = '';
+      layout.style.width = '';
     }
-    if (content) content.style.padding = '0';
+    if (content) content.style.padding = '';
   } else {
+    document.body.classList.remove('auth-page');
     if (topbar) topbar.style.display = 'flex';
+    if (sidebar) sidebar.style.display = 'flex';
     if (layout) {
-      layout.style.marginLeft = window.innerWidth <= 768 ? '0' : 'var(--sidebar-w)';
-      layout.style.width = window.innerWidth <= 768 ? '100%' : 'calc(100% - var(--sidebar-w))';
+      layout.style.marginLeft = '';
+      layout.style.width = '';
     }
-    if (content) content.style.padding = window.innerWidth <= 768 ? '20px' : '32px';
+    if (content) content.style.padding = '';
   }
 
   if (!content) return;
@@ -1003,14 +1013,11 @@ function startDashboardClock() {
 function updateSidebar() {
   const user = getCurrentUser();
   const sidebar = document.getElementById('sidebar');
-  const layout = document.getElementById('layout');
   if (!user) {
     if (sidebar) sidebar.style.display = 'none';
-    if (layout) layout.style.marginLeft = '0';
     return;
   }
   if (sidebar) sidebar.style.display = 'flex';
-  if (layout) layout.style.marginLeft = 'var(--sidebar-w)';
 
   document.getElementById('user-name').textContent = user.full_name || user.email;
   document.getElementById('user-role').textContent = user.role ? `${user.role.charAt(0).toUpperCase() + user.role.slice(1)} Account` : '';
@@ -4785,13 +4792,23 @@ function init() {
     handleRoute();
     updateDateBadge();
     setInterval(updateDateBadge, 1000);
-    document.getElementById('hamburger')?.addEventListener('click', () => {
-      document.getElementById('sidebar').classList.toggle('open');
-      document.getElementById('overlay').classList.toggle('active');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    const hamburger = document.getElementById('hamburger');
+
+    hamburger?.addEventListener('click', () => {
+      sidebar?.classList.toggle('open');
+      overlay?.classList.toggle('active');
     });
-    document.getElementById('overlay')?.addEventListener('click', () => {
-      document.getElementById('sidebar').classList.remove('open');
-      document.getElementById('overlay').classList.remove('active');
+    overlay?.addEventListener('click', () => {
+      sidebar?.classList.remove('open');
+      overlay?.classList.remove('active');
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        sidebar?.classList.remove('open');
+        overlay?.classList.remove('active');
+      }
     });
     document.getElementById('logout-btn')?.addEventListener('click', e => {
       e.preventDefault();
